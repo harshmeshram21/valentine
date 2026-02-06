@@ -16,10 +16,13 @@ const ProposalSection: React.FC<ProposalSectionProps> = ({ onAccept }) => {
   const noButtonRef = useRef<HTMLButtonElement>(null);
   const lastMoveTime = useRef<number>(0);
 
-  // Initial layout fix: start No button slightly offset
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+  // Initial position: start the No button to the right of the center
   useEffect(() => {
-    setNoPosition({ x: window.innerWidth < 768 ? 60 : 100, y: 0 });
-  }, []);
+    // 80px offset for desktop, 60px for mobile puts it nicely to the right
+    setNoPosition({ x: isMobile ? 65 : 100, y: 0 });
+  }, [isMobile]);
 
   const moveNoButton = useCallback(() => {
     const now = Date.now();
@@ -30,35 +33,37 @@ const ProposalSection: React.FC<ProposalSectionProps> = ({ onAccept }) => {
 
     const containerRect = containerRef.current.getBoundingClientRect();
     
-    // Responsive button dimensions
-    const isMobile = window.innerWidth < 768;
+    // Responsive button and element dimensions
     const btnWidth = isMobile ? 80 : 100;
     const btnHeight = isMobile ? 40 : 50;
     const bubbleHeight = isMobile ? 70 : 90; 
-    const margin = 20;
+    
+    // Safety margin to stay away from edges and rounded corners
+    const padding = isMobile ? 40 : 60;
 
-    // Boundaries relative to center
-    const minX = -containerRect.width / 2 + btnWidth / 2 + margin;
-    const maxX = containerRect.width / 2 - btnWidth / 2 - margin;
-    const minY = -containerRect.height / 2 + btnHeight / 2 + bubbleHeight; 
-    const maxY = containerRect.height / 2 - btnHeight / 2 - margin;
+    // Boundaries relative to the center of the main white box
+    const minX = -containerRect.width / 2 + btnWidth / 2 + padding;
+    const maxX = containerRect.width / 2 - btnWidth / 2 - padding;
+    const minY = -containerRect.height / 2 + btnHeight / 2 + bubbleHeight + padding; 
+    const maxY = containerRect.height / 2 - btnHeight / 2 - padding;
 
     let newX, newY;
-    // On mobile, keep it closer but still erratic
-    const useFarMove = isMobile ? Math.random() > 0.5 : Math.random() > 0.3;
+    
+    // Generate a new position that is guaranteed to be within bounds
+    const sideJumpX = Math.random() > 0.5 ? 1 : -1;
+    const sideJumpY = Math.random() > 0.5 ? 1 : -1;
 
-    if (useFarMove) {
-      newX = noPosition.x > 0 ? Math.random() * (0 - minX) + minX : Math.random() * (maxX - 0) + 0;
-      newY = noPosition.y > 0 ? Math.random() * (0 - minY) + minY : Math.random() * (maxY - 0) + 0;
-    } else {
-      newX = Math.random() * (maxX - minX) + minX;
-      newY = Math.random() * (maxY - minY) + minY;
-    }
+    newX = noPosition.x + (sideJumpX * (100 + Math.random() * 150));
+    newY = noPosition.y + (sideJumpY * (100 + Math.random() * 150));
+
+    // Clamp values to stay inside the white box
+    newX = Math.max(minX, Math.min(maxX, newX));
+    newY = Math.max(minY, Math.min(maxY, newY));
 
     setNoPosition({ x: newX, y: newY });
     setNoCount((prev) => (prev + 1));
     setShowBubble(true);
-  }, [noPosition]);
+  }, [noPosition, isMobile]);
 
   useEffect(() => {
     const handleInteraction = (clientX: number, clientY: number) => {
@@ -72,7 +77,7 @@ const ProposalSection: React.FC<ProposalSectionProps> = ({ onAccept }) => {
         Math.pow(clientX - btnCenterX, 2) + Math.pow(clientY - btnCenterY, 2)
       );
 
-      const triggerDistance = window.innerWidth < 768 ? 60 : 85;
+      const triggerDistance = isMobile ? 70 : 100;
 
       if (distance < triggerDistance) {
         moveNoButton();
@@ -92,7 +97,7 @@ const ProposalSection: React.FC<ProposalSectionProps> = ({ onAccept }) => {
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('touchmove', onTouchMove);
     };
-  }, [moveNoButton]);
+  }, [moveNoButton, isMobile]);
 
   const currentThought = NO_MESSAGES[noCount % NO_MESSAGES.length];
 
@@ -101,32 +106,39 @@ const ProposalSection: React.FC<ProposalSectionProps> = ({ onAccept }) => {
       ref={containerRef}
       className="bg-white/95 backdrop-blur-md p-6 md:p-12 rounded-[2.5rem] md:rounded-[3.5rem] shadow-2xl border-4 border-rose-200 text-center relative w-full min-h-[500px] md:min-h-[600px] flex flex-col justify-center items-center overflow-hidden select-none"
     >
+      <div className="absolute top-0 left-0 w-full h-full opacity-[0.03] pointer-events-none">
+        <Heart size={300} className="absolute -top-20 -left-20 rotate-12" />
+        <Heart size={200} className="absolute -bottom-10 -right-10 -rotate-12" />
+      </div>
+
       <motion.div
         animate={{ 
           scale: [1, 1.1, 1],
           y: [0, -10, 0]
         }}
         transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-        className="mb-4 md:mb-8 text-rose-500 drop-shadow-xl"
+        className="mb-4 md:mb-8 text-rose-500 drop-shadow-xl z-10"
       >
-        <Heart size={window.innerWidth < 768 ? 48 : 64} fill="currentColor" />
+        <Heart size={isMobile ? 48 : 64} fill="currentColor" />
       </motion.div>
 
-      <h1 className="text-3xl md:text-5xl font-bold text-rose-600 mb-4 md:mb-6 font-handwriting leading-tight drop-shadow-sm px-2">
+      <h1 className="text-3xl md:text-5xl font-bold text-rose-600 mb-4 md:mb-6 font-handwriting leading-tight drop-shadow-sm px-2 z-10">
         Will you be my Valentine?
       </h1>
       
-      <p className="text-rose-400 mb-8 md:mb-12 text-sm md:text-lg italic font-medium opacity-90 px-4">
+      <p className="text-rose-400 mb-8 md:mb-12 text-sm md:text-lg italic font-medium opacity-90 px-4 z-10">
         You know what to do... ❤️
       </p>
 
-      <div className="flex items-center justify-center w-full relative h-32 md:h-48">
-        {/* YES Button */}
+      {/* Shared Buttons Container - Ensures initial alignment on one line */}
+      <div className="relative z-20 h-24 md:h-32 w-full flex items-center justify-center">
+        {/* YES Button - Shifted left to balance the No button on the right */}
         <motion.button
           whileHover={{ scale: 1.05, rotate: -2 }}
           whileTap={{ scale: 0.95 }}
           onClick={onAccept}
           animate={{
+            x: isMobile ? -65 : -100,
             scale: 1 + (Math.min(noCount, 15) * 0.025),
             boxShadow: [
               `0 0 10px rgba(244, 63, 94, 0.2)`,
@@ -136,15 +148,15 @@ const ProposalSection: React.FC<ProposalSectionProps> = ({ onAccept }) => {
           }}
           transition={{
             boxShadow: { repeat: Infinity, duration: 2 },
-            scale: { type: 'spring', stiffness: 300, damping: 20 }
+            scale: { type: 'spring', stiffness: 300, damping: 20 },
+            x: { type: 'spring', stiffness: 300, damping: 25 }
           }}
-          className="bg-rose-500 hover:bg-rose-600 text-white px-8 md:px-12 py-3 md:py-5 rounded-full text-xl md:text-3xl font-black shadow-lg shadow-rose-200 transition-colors z-20 cursor-pointer"
-          style={{ x: window.innerWidth < 768 ? -40 : -70 }} 
+          className="bg-rose-500 hover:bg-rose-600 text-white px-8 md:px-12 py-3 md:py-5 rounded-full text-xl md:text-3xl font-black shadow-lg shadow-rose-200 transition-colors cursor-pointer"
         >
           YES!
         </motion.button>
 
-        {/* NO Button Container */}
+        {/* NO Button Container - Positioned absolutely inside the centered button row */}
         <motion.div
           animate={{ x: noPosition.x, y: noPosition.y }}
           transition={{ 
@@ -153,16 +165,16 @@ const ProposalSection: React.FC<ProposalSectionProps> = ({ onAccept }) => {
             damping: 24,
             mass: 1
           }}
-          className="absolute z-10 flex flex-col items-center"
+          className="absolute z-10 flex flex-col items-center pointer-events-none"
         >
           <AnimatePresence mode="wait">
             {showBubble && (
               <motion.div
                 key={noCount}
                 initial={{ opacity: 0, scale: 0.8, y: 0 }}
-                animate={{ opacity: 1, scale: 1, y: window.innerWidth < 768 ? -50 : -70 }}
+                animate={{ opacity: 1, scale: 1, y: isMobile ? -55 : -75 }}
                 exit={{ opacity: 0, scale: 0.5 }}
-                className="absolute bg-white px-3 md:px-5 py-2 md:py-3 rounded-xl md:rounded-2xl shadow-xl border-2 border-rose-100 flex items-center whitespace-nowrap z-30 pointer-events-none"
+                className="absolute bg-white px-3 md:px-5 py-2 md:py-3 rounded-xl md:rounded-2xl shadow-xl border-2 border-rose-100 flex items-center whitespace-nowrap z-30"
               >
                 <span className="text-rose-600 font-extrabold text-xs md:text-lg">
                   {currentThought}
@@ -176,14 +188,14 @@ const ProposalSection: React.FC<ProposalSectionProps> = ({ onAccept }) => {
             ref={noButtonRef}
             onMouseEnter={moveNoButton}
             onTouchStart={(e) => { e.preventDefault(); moveNoButton(); }}
-            className="bg-gray-100 text-gray-400 px-6 md:px-8 py-2 md:py-3 rounded-full text-sm md:text-lg font-bold shadow-md border border-gray-200 cursor-default"
+            className="bg-gray-100 text-gray-400 px-6 md:px-8 py-2 md:py-3 rounded-full text-sm md:text-lg font-bold shadow-md border border-gray-200 cursor-default pointer-events-auto"
           >
             No
           </button>
         </motion.div>
       </div>
 
-      <div className="h-16 mt-6 md:mt-8 flex flex-col items-center justify-center">
+      <div className="h-16 mt-6 md:mt-8 flex flex-col items-center justify-center z-10">
         {noCount > 0 && (
           <motion.div
             initial={{ opacity: 0 }}

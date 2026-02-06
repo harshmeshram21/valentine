@@ -10,14 +10,17 @@ import { PartyPopper, Heart, Sparkles, RefreshCw, ChevronLeft, ChevronRight, Mai
 const GallerySection: React.FC = () => {
   const AI_CARD_ID = 999999;
   
+  // Place the AI Special Note at the BOTTOM (index 0) so it's the final surprise reveal.
+  // This gives the API call more time to finish in the background while the user is swiping.
   const [cards, setCards] = useState<CardItem[]>(() => [
-    ...GALLERY_CARDS,
-    { id: AI_CARD_ID, imageUrl: '', message: 'Writing a special note for you...' }
+    { id: AI_CARD_ID, imageUrl: '', message: 'Writing a special note for you...' },
+    ...GALLERY_CARDS
   ]);
   
   const [personalizedMessage, setPersonalizedMessage] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isMessageOpen, setIsMessageOpen] = useState(false);
+  const [exitDirections, setExitDirections] = useState<Record<number, 'left' | 'right'>>({});
 
   useEffect(() => {
     const fetchSweetMessage = async () => {
@@ -51,22 +54,25 @@ const GallerySection: React.FC = () => {
   };
 
   const handleRestart = () => {
+    setExitDirections({});
     setCards([
-      ...GALLERY_CARDS,
-      { id: AI_CARD_ID, imageUrl: '', message: personalizedMessage || 'Writing a special note for you...' }
+      { id: AI_CARD_ID, imageUrl: '', message: personalizedMessage || 'Writing a special note for you...' },
+      ...GALLERY_CARDS
     ]);
   };
 
-  const handleManualSwipe = () => {
+  const handleManualSwipe = (direction: 'left' | 'right') => {
     if (cards.length > 0) {
       const topCard = cards[cards.length - 1];
-      removeCard(topCard.id);
+      setExitDirections(prev => ({ ...prev, [topCard.id]: direction }));
+      setTimeout(() => {
+        removeCard(topCard.id);
+      }, 10);
     }
   };
 
   return (
     <div className="flex flex-col items-center h-full w-full py-2 relative">
-      {/* Header Area */}
       <div className="text-center shrink-0 mb-4 px-4 w-full">
         <motion.div
           initial={{ scale: 0 }}
@@ -93,22 +99,19 @@ const GallerySection: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Interaction Area */}
       <div className="flex flex-row items-center justify-center w-full gap-2 md:gap-8 flex-1 relative px-2">
-        {/* Left Arrow - Hidden or smaller on very small mobile */}
         {cards.length > 0 && (
           <motion.button
-            whileHover={{ scale: 1.1, x: -5 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={handleManualSwipe}
+            whileHover={{ scale: 1.1, x: -5, backgroundColor: 'rgba(255, 241, 242, 1)' }}
+            whileTap={{ scale: 0.85, backgroundColor: 'rgba(244, 63, 94, 1)', color: 'white' }}
+            onClick={() => handleManualSwipe('left')}
             className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-white/80 border-2 border-rose-200 shadow-lg flex items-center justify-center text-rose-500 hover:bg-rose-50 transition-all z-40"
-            aria-label="Previous Card"
+            aria-label="Swipe Left"
           >
             <ChevronLeft size={24} strokeWidth={3} className="md:w-10 md:h-10" />
           </motion.button>
         )}
 
-        {/* Card Container - Sized for mobile viewport */}
         <div className="relative w-full max-w-[240px] md:max-w-[300px] aspect-[2/3] perspective-1000">
           <AnimatePresence>
             {cards.length > 0 ? (
@@ -118,6 +121,7 @@ const GallerySection: React.FC = () => {
                   card={card}
                   isTop={index === cards.length - 1}
                   onSwipe={() => removeCard(card.id)}
+                  forcedDirection={exitDirections[card.id]}
                 />
               )).reverse() 
             ) : (
@@ -141,35 +145,27 @@ const GallerySection: React.FC = () => {
           </AnimatePresence>
         </div>
 
-        {/* Right Arrow */}
         {cards.length > 0 && (
           <motion.button
-            whileHover={{ scale: 1.1, x: 5 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={handleManualSwipe}
+            whileHover={{ scale: 1.1, x: 5, backgroundColor: 'rgba(255, 241, 242, 1)' }}
+            whileTap={{ scale: 0.85, backgroundColor: 'rgba(244, 63, 94, 1)', color: 'white' }}
+            onClick={() => handleManualSwipe('right')}
             className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-white/80 border-2 border-rose-200 shadow-lg flex items-center justify-center text-rose-500 hover:bg-rose-50 transition-all z-40"
-            aria-label="Next Card"
+            aria-label="Swipe Right"
           >
             <ChevronRight size={24} strokeWidth={3} className="md:w-10 md:h-10" />
           </motion.button>
         )}
       </div>
 
-      {/* Instructions & Footer */}
       <div className="mt-4 shrink-0 flex flex-col items-center gap-1 w-full px-4">
         <div className="flex items-center gap-2">
            <Heart size={14} className="text-rose-400 animate-pulse" fill="currentColor" />
-           <span className="text-rose-400 font-medium text-[10px] md:text-xs italic text-center">Swipe the top card to explore!</span>
+           <span className="text-rose-400 font-medium text-[10px] md:text-xs italic text-center">Swipe to see your special note!</span>
            <Heart size={14} className="text-rose-400 animate-pulse" fill="currentColor" />
-        </div>
-        <div className="text-rose-300 text-[9px] md:text-xs text-center flex items-center gap-2 opacity-60">
-          <span className="hidden sm:inline w-8 h-px bg-rose-200"></span>
-          <span>Swipe or use side arrows</span>
-          <span className="hidden sm:inline w-8 h-px bg-rose-200"></span>
         </div>
       </div>
 
-      {/* Love Letter Overlay */}
       <AnimatePresence>
         {isMessageOpen && (
           <motion.div

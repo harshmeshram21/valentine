@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { motion, useMotionValue, useTransform } from 'framer-motion';
+import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import { CardItem } from '../types';
 import { Heart, Mail } from 'lucide-react';
 
@@ -8,9 +8,10 @@ interface TinderCardProps {
   card: CardItem;
   isTop: boolean;
   onSwipe: () => void;
+  forcedDirection?: 'left' | 'right';
 }
 
-const TinderCard: React.FC<TinderCardProps> = ({ card, isTop, onSwipe }) => {
+const TinderCard: React.FC<TinderCardProps> = ({ card, isTop, onSwipe, forcedDirection }) => {
   const x = useMotionValue(0);
   
   // Create rotational effect based on horizontal drag
@@ -33,10 +34,40 @@ const TinderCard: React.FC<TinderCardProps> = ({ card, isTop, onSwipe }) => {
     
     if (Math.abs(currentX) > threshold || Math.abs(info.velocity.x) > 500) {
       onSwipe();
+    } else if (Math.abs(currentX) > 15) {
+      // Subtle shake animation if the swipe wasn't quite far enough
+      // This provides tactile feedback that the action was recognized but incomplete
+      animate(x, [currentX, currentX + 12, currentX - 12, currentX + 8, currentX - 8, 0], {
+        duration: 0.5,
+        times: [0, 0.2, 0.4, 0.6, 0.8, 1],
+        ease: "easeInOut"
+      });
     }
   };
 
   const hasImage = !!card.imageUrl;
+
+  // Determine exit path: either follow current drag or follow the forced direction from buttons
+  const getExitX = () => {
+    // Explicit priority for button-triggered directions
+    if (forcedDirection === 'left') return -1000;
+    if (forcedDirection === 'right') return 1000;
+    
+    const currentX = x.get();
+    if (currentX > 0) return 1000;
+    if (currentX < 0) return -1000;
+    
+    // Total fallback if everything is 0
+    return 1000;
+  };
+
+  const getExitRotate = () => {
+    if (forcedDirection === 'left') return -45;
+    if (forcedDirection === 'right') return 45;
+    
+    const currentX = x.get();
+    return currentX >= 0 ? 45 : -45;
+  };
 
   return (
     <motion.div
@@ -62,10 +93,10 @@ const TinderCard: React.FC<TinderCardProps> = ({ card, isTop, onSwipe }) => {
       whileTap={isTop ? { scale: 1.02, cursor: 'grabbing' } : {}}
       // Fly-off-screen animation when the card is removed from the list
       exit={{ 
-        x: x.get() >= 0 ? 1000 : -1000, 
+        x: getExitX(), 
         opacity: 0,
-        rotate: x.get() >= 0 ? 45 : -45,
-        transition: { duration: 0.4, ease: "easeIn" }
+        rotate: getExitRotate(),
+        transition: { duration: 0.5, ease: "easeInOut" }
       }}
       className="bg-white rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden border-2 md:border-4 border-white"
     >
@@ -77,9 +108,14 @@ const TinderCard: React.FC<TinderCardProps> = ({ card, isTop, onSwipe }) => {
               alt="Valentine"
               className="w-full h-full object-cover select-none pointer-events-none"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-rose-900/80 via-transparent to-transparent pointer-events-none" />
-            <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 text-white text-center pointer-events-none">
-              <p className="text-lg md:text-xl font-bold italic font-handwriting leading-tight drop-shadow-lg">
+            {/* Darkened bottom gradient for text contrast */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent pointer-events-none" />
+            
+            <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10 text-white text-center pointer-events-none">
+              <p 
+                className="text-xl md:text-3xl font-bold italic font-handwriting leading-tight"
+                style={{ textShadow: '0px 2px 8px rgba(0,0,0,0.8), 0px 1px 2px rgba(0,0,0,0.4)' }}
+              >
                 {card.message}
               </p>
             </div>

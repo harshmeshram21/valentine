@@ -20,9 +20,7 @@ export const NO_MESSAGES = [
 ];
 
 export const GALLERY_CARDS: CardItem[] = [
-  { id: 1, imageUrl: 'https://picsum.photos/seed/love1/800/1200', message: "You're the missing piece to my puzzle." },
-  { id: 2, imageUrl: 'https://picsum.photos/seed/love2/800/1200', message: "Every moment with you is a fairytale." },
-  { id: 3, imageUrl: 'https://picsum.photos/seed/love3/800/1200', message: "My favorite place in the world is next to you." },
-  { id: 4, imageUrl: 'https://picsum.photos/seed/love4/800/1200', message: "Life is sweeter with you." },
-  { id: 5, imageUrl: 'https://picsum.photos/seed/love5/800/1200', message: "To infinity and beyond, together." }
+  { id: 1, imageUrl: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=800&auto=format&fit=crop', message: "You're the missing piece to my puzzle." },
+  { id: 2, imageUrl: 'https://images.unsplash.com/photo-1516589174184-c68526614488?q=80&w=800&auto=format&fit=crop', message: "Every moment with you is a fairytale." },
+  { id: 3, imageUrl: 'https://images.unsplash.com/photo-1494774157365-9e04c6720e47?q=80&w=800&auto=format&fit=crop', message: "My favorite place in the world is next to you." }
 ];
